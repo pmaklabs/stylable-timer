@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
   <meta charset="UTF-8">
   <title>Custom Digital Timer</title>
   <!-- ✅ Load Google Fonts so dropdown selections actually take effect -->
@@ -15,10 +17,11 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
+      min-height: 100svh;
       transition: background-color 0.3s, color 0.3s, font-family 0.3s;
       font-family: monospace;
-    }
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
     #form-container {
       display: flex;
       flex-direction: column;
@@ -30,7 +33,7 @@
     }
     /* Fixed-height preview/timer boxes */
     #timer, #preview {
-      font-size: 64px;
+      font-size: clamp(40px, 12vw, 120px);
       line-height: 1;
       height: 1em;
       display: inline-flex;
@@ -44,14 +47,36 @@
     input, select, button {
       font-size: 16px;
       padding: 6px;
-    }
+      min-height: 44px;
+      padding: 10px 12px;
+      touch-action: manipulation;
+}
     .time-inputs {
       display: flex;
       gap: 5px;
-    }
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+}
     .time-inputs input {
-      width: 60px;
+      width: 100%;
       text-align: center;
+    }
+  
+    @media (max-width: 480px) {
+      #form-container { gap: 12px; }
+/*      .time-inputs { grid-template-columns: 1fr; }*/
+      button { width: 100%; }
+    }
+    
+    .time-inputs label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .time-inputs label input {
+      flex: 1;
+      min-width: 0;
     }
   </style>
 </head>
@@ -59,9 +84,9 @@
   <div id="form-container">
     <div id="preview">00:00.00</div>
     <div class="time-inputs">
-      <label>MM:<input type="number" id="mm" min="0" max="59" value="0"></label>
-      <label>SS:<input type="number" id="ss" min="0" max="59" value="0" onblur="clipInput(this, 59)"></label>
-      <label>CS:<input type="number" id="cs" min="0" max="99" value="0" onblur="clipInput(this, 99)"></label>
+      <label>MM:<input type="number" id="mm" min="0" max="59" value="0" inputmode="numeric" pattern="[0-9]*"></label>
+      <label>SS:<input type="number" id="ss" min="0" max="59" value="0" onblur="clipInput(this, 59)" inputmode="numeric" pattern="[0-9]*"></label>
+      <label>CS:<input type="number" id="cs" min="0" max="99" value="0" onblur="clipInput(this, 99)" inputmode="numeric" pattern="[0-9]*"></label>
     </div>
     <label>
       Delay Seconds:
@@ -161,7 +186,6 @@
       document.getElementById("timer").style.display = "none";
       document.getElementById("form-container").style.display = "flex";
       document.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("pointerdown", onCancelPointer);
       document.body.style.backgroundColor = initialStyle.bg;
       document.body.style.color = initialStyle.color;
       document.body.style.fontFamily = initialStyle.font;
@@ -171,10 +195,6 @@
       if (e.key === "Escape") {
         cancelTimer();
       }
-    }
-
-    function onCancelPointer() {
-      cancelTimer();
     }
 
     function startTimer() {
@@ -197,7 +217,6 @@
       running = true;
       document.addEventListener("keydown", onKeyDown);
 
-      document.addEventListener("pointerdown", onCancelPointer);
       setTimeout(() => {
         const start = performance.now();
         let lastText = "";
