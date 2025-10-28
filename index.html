@@ -161,6 +161,7 @@
       document.getElementById("timer").style.display = "none";
       document.getElementById("form-container").style.display = "flex";
       document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onCancelPointer);
       document.body.style.backgroundColor = initialStyle.bg;
       document.body.style.color = initialStyle.color;
       document.body.style.fontFamily = initialStyle.font;
@@ -170,6 +171,10 @@
       if (e.key === "Escape") {
         cancelTimer();
       }
+    }
+
+    function onCancelPointer() {
+      cancelTimer();
     }
 
     function startTimer() {
@@ -192,6 +197,7 @@
       running = true;
       document.addEventListener("keydown", onKeyDown);
 
+      document.addEventListener("pointerdown", onCancelPointer);
       setTimeout(() => {
         const start = performance.now();
         let lastText = "";
