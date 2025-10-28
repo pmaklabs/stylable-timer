@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Custom Digital Timer</title>
+  <!-- ✅ Load Google Fonts so dropdown selections actually take effect -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto+Mono:wght@400;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      transition: background-color 0.3s, color 0.3s, font-family 0.3s;
+      font-family: monospace;
+    }
+    #form-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+    label {
+      font-size: 16px;
+    }
+    /* Fixed-height preview/timer boxes */
+    #timer, #preview {
+      font-size: 64px;
+      line-height: 1;
+      height: 1em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-variant-numeric: tabular-nums lining-nums;
+      padding: 10px 20px;
+      border-radius: 8px;
+    }
+    #timer { display: none; }
+    input, select, button {
+      font-size: 16px;
+      padding: 6px;
+    }
+    .time-inputs {
+      display: flex;
+      gap: 5px;
+    }
+    .time-inputs input {
+      width: 60px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="form-container">
+    <div id="preview">00:00.00</div>
+    <div class="time-inputs">
+      <label>MM:<input type="number" id="mm" min="0" max="59" value="0"></label>
+      <label>SS:<input type="number" id="ss" min="0" max="59" value="0" onblur="clipInput(this, 59)"></label>
+      <label>CS:<input type="number" id="cs" min="0" max="99" value="0" onblur="clipInput(this, 99)"></label>
+    </div>
+    <label>
+      Delay Seconds:
+      <input type="number" id="delay" min="0" max="10" value="1">
+    </label>
+    <label>
+      Background Color:
+      <input type="color" id="bg-color" value="#000000" onchange="updatePreview()">
+    </label>
+    <label>
+      Font Color:
+      <input type="color" id="font-color" value="#ffffff" onchange="updatePreview()">
+    </label>
+    <label>
+      Font Family:
+      <select id="font-family" onchange="updatePreview()">
+        <option value="Courier New">Courier New</option>
+        <option value="Consolas">Consolas</option>
+        <option value="Menlo">Menlo</option>
+        <option value="Monaco">Monaco</option>
+        <option value="Source Code Pro">Source Code Pro</option>
+        <option value="DejaVu Sans Mono">DejaVu Sans Mono</option>
+        <option value="Ubuntu Mono">Ubuntu Mono</option>
+        <option value="Roboto Mono">Roboto Mono</option>
+        <option value="monospace" selected>monospace</option>
+      </select>
+    </label>
+    <label>
+      Reverse (Count Down):
+      <input type="checkbox" id="reverse-mode">
+    </label>
+    <label>
+      Show centiseconds:
+      <input type="checkbox" id="show-ms" checked>
+    </label>
+    <button onclick="startTimer()">Run Timer</button>
+  </div>
+  <div id="timer">00:00.00</div>
+
+  <script>
+    let running = false;
+    let animationId = null;
+    let initialStyle = {};
+
+    window.onload = () => {
+      const style = getComputedStyle(document.body);
+      initialStyle = {
+        bg: style.backgroundColor,
+        color: style.color,
+        font: style.fontFamily
+      };
+      updatePreview();
+    };
+
+    function clipInput(input, max) {
+      const val = parseInt(input.value) || 0;
+      input.value = Math.min(Math.max(0, val), max);
+    }
+
+    function updatePreview() {
+      const font = document.getElementById("font-family").value;
+      const color = document.getElementById("font-color").value;
+      const bg = document.getElementById("bg-color").value;
+      const preview = document.getElementById("preview");
+      preview.style.fontFamily = `"${font}", monospace`;
+      preview.style.color = color;
+      preview.style.backgroundColor = bg;
+    }
+
+    function getTotalMs() {
+      const mm = Math.max(0, parseInt(document.getElementById("mm").value) || 0);
+      const ss = Math.min(Math.max(0, parseInt(document.getElementById("ss").value) || 0), 59);
+      const cs = Math.min(Math.max(0, parseInt(document.getElementById("cs").value) || 0), 99);
+      return mm * 60000 + ss * 1000 + cs * 10;
+    }
+
+    function formatTime(ms, showMs) {
+      ms = Math.max(0, ms);
+      const minutes = Math.floor(ms / 60000);
+      const seconds = Math.floor((ms % 60000) / 1000);
+      const centis = Math.floor((ms % 1000) / 10);
+      return showMs
+        ? (
+            String(minutes).padStart(2, '0') + ':' +
+            String(seconds).padStart(2, '0') + '.' +
+            String(centis).padStart(2, '0')
+          )
+        : (
+            String(minutes).padStart(2, '0') + ':' +
+            String(seconds).padStart(2, '0')
+          );
+    }
+
+    function cancelTimer() {
+      running = false;
+      cancelAnimationFrame(animationId);
+      document.getElementById("timer").style.display = "none";
+      document.getElementById("form-container").style.display = "flex";
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.backgroundColor = initialStyle.bg;
+      document.body.style.color = initialStyle.color;
+      document.body.style.fontFamily = initialStyle.font;
+    }
+
+    function onKeyDown(e) {
+      if (e.key === "Escape") {
+        cancelTimer();
+      }
+    }
+
+    function startTimer() {
+      const totalMs = getTotalMs();
+      const delaySeconds = parseFloat(document.getElementById("delay").value) || 0;
+      const bg = document.getElementById("bg-color").value;
+      const color = document.getElementById("font-color").value;
+      const font = document.getElementById("font-family").value;
+      const reverse = document.getElementById("reverse-mode").checked;
+      const showMs = document.getElementById("show-ms").checked;
+
+      document.body.style.backgroundColor = bg;
+      document.body.style.color = color;
+      document.body.style.fontFamily = `"${font}", monospace`;
+      document.getElementById("form-container").style.display = "none";
+      const timerDisplay = document.getElementById("timer");
+      timerDisplay.style.display = "block";
+      timerDisplay.textContent = formatTime(reverse ? totalMs : 0, showMs);
+
+      running = true;
+      document.addEventListener("keydown", onKeyDown);
+
+      setTimeout(() => {
+        const start = performance.now();
+        let lastText = "";
+
+        function update() {
+          if (!running) return;
+          const now = performance.now();
+          const elapsed = now - start;
+          const currentMs = reverse ? totalMs - elapsed : elapsed;
+          const cappedMs = reverse ? Math.max(currentMs, 0) : Math.min(currentMs, totalMs);
+          const text = formatTime(cappedMs, showMs);
+          if (text !== lastText) {
+            timerDisplay.textContent = text;
+            lastText = text;
+          }
+          if ((reverse && currentMs > 0) || (!reverse && elapsed < totalMs)) {
+            animationId = requestAnimationFrame(update);
+          }
+        }
+        update();
+      }, delaySeconds * 1000);
+    }
+  </script>
+</body>
+</html>
