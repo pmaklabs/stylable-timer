@@ -78,6 +78,28 @@
       flex: 1;
       min-width: 0;
     }
+  
+    #close-btn {
+      position: fixed;
+      top: calc(env(safe-area-inset-top) + 8px);
+      right: calc(env(safe-area-inset-right) + 8px);
+      z-index: 2147483647;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid currentColor;
+      background: transparent;
+      color: currentColor;
+      font-size: 24px;
+      line-height: 1;
+      display: none; /* shown only while running */
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #close-btn:active { transform: scale(0.96); }
+
   </style>
 </head>
 <body>
@@ -124,6 +146,7 @@
     </label>
     <button onclick="startTimer()">Run Timer</button>
   </div>
+  <button id="close-btn" aria-label="Close timer" title="Close">×</button>
   <div id="timer">00:00.00</div>
 
   <script>
@@ -186,7 +209,9 @@
       document.getElementById("timer").style.display = "none";
       document.getElementById("form-container").style.display = "flex";
       document.removeEventListener("keydown", onKeyDown);
-      document.body.style.backgroundColor = initialStyle.bg;
+
+      const closeBtn = document.getElementById("close-btn");
+      if (closeBtn) { closeBtn.style.display = "none"; closeBtn.onclick = null; }document.body.style.backgroundColor = initialStyle.bg;
       document.body.style.color = initialStyle.color;
       document.body.style.fontFamily = initialStyle.font;
     }
@@ -212,6 +237,11 @@
       document.getElementById("form-container").style.display = "none";
       const timerDisplay = document.getElementById("timer");
       timerDisplay.style.display = "block";
+      const closeBtn = document.getElementById("close-btn");
+      if (closeBtn) {
+        closeBtn.style.display = "inline-flex";
+        closeBtn.onclick = cancelTimer;
+      }
       timerDisplay.textContent = formatTime(reverse ? totalMs : 0, showMs);
 
       running = true;
