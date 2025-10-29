@@ -110,6 +110,14 @@
       gap: 8px;
     }
     .show-record #record-wrap { display: inline-flex; }  /* when visible */
+  
+  #timer-canvas {
+      display: block;
+      width: min(100%, 720px);
+      height: auto;
+      aspect-ratio: 20 / 7; /* reserve height to prevent jump */
+      display: none; /* will be set to block when running in Canvas mode */
+  }
   </style>
 </head>
 <body>
@@ -179,7 +187,9 @@
     let recorder = null;
     let recordedChunks = [];
 
-    window.onload = () => {
+    
+    let canvasCtx = null; // cached 2D context per run
+window.onload = () => {
       const style = getComputedStyle(document.body);
       initialStyle = {
         bg: style.backgroundColor,
@@ -221,7 +231,9 @@
       const cvs = document.getElementById("timer-canvas");
       const dpr = Math.max(1, window.devicePixelRatio || 1);
       // Use rendered width or fallback
-      const cssWidth = Math.min(cvs.clientWidth || 720, 720);
+      const rect = cvs.getBoundingClientRect();
+      const w = rect.width;
+      const cssWidth = Math.min(w > 0 ? w : 720, 720);
       const cssHeight = Math.max(160, Math.round(cssWidth * 0.35));
       cvs.width = Math.floor(cssWidth * dpr);
       cvs.height = Math.floor(cssHeight * dpr);
@@ -357,10 +369,7 @@
       } else {
         timerDisplay.style.display = "none";
         canvasEl.style.display = "block";
-        whenFontsReady().then(() => {
-          const ctx = initCanvas(font, color, bg);
-          drawCanvasText(ctx, formatTime(reverse ? totalMs : 0, showMs));
-        });
+        whenFontsReady().then(() => { requestAnimationFrame(() => { canvasCtx = initCanvas(font, color, bg); drawCanvasText(canvasCtx, formatTime(reverse ? totalMs : 0, showMs)); if (typeof startRecordingIfEnabled==='function') startRecordingIfEnabled(canvasEl, wantRecord); }); });
         startRecordingIfEnabled(canvasEl, wantRecord);
       }
 running = true;
@@ -378,12 +387,7 @@ running = true;
           const cappedMs = reverse ? Math.max(currentMs, 0) : Math.min(currentMs, totalMs);
           const text = formatTime(cappedMs, showMs);
           if (text !== lastText) {
-            if (mode === "dom") {
-              timerDisplay.textContent = text;
-            } else {
-              const ctx = initCanvas(font, color, bg);
-              drawCanvasText(ctx, text);
-            }
+            if (mode === "dom") { timerDisplay.textContent = text; } else { if (!canvasCtx) { canvasCtx = initCanvas(font, color, bg); } drawCanvasText(canvasCtx, text); }
             lastText = text;
           }
           if ((reverse && currentMs > 0) || (!reverse && elapsed < totalMs)) {
