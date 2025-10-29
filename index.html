@@ -1,405 +1,462 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#000000">
-  <meta charset="UTF-8">
-  <title>Custom Digital Timer</title>
-  <!-- ✅ Load Google Fonts so dropdown selections actually take effect -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto+Mono:wght@400;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <style>
-    body {
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100svh;
-      transition: background-color 0.3s, color 0.3s, font-family 0.3s;
-      font-family: monospace;
-      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    }
-    #form-container {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      align-items: center;
-    }
-    label {
-      font-size: 16px;
-    }
-    /* Fixed-height preview/timer boxes */
-    #timer, #preview {
-      font-size: clamp(40px, 12vw, 120px);
-      line-height: 1;
-      height: 1em;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-variant-numeric: tabular-nums lining-nums;
-      padding: 10px 20px;
-      border-radius: 8px;
-    }
-    #timer { display: none; }
-    input, select, button {
-      font-size: 16px;
-      min-height: 44px;
-      padding: 10px 12px;
-      touch-action: manipulation;
-    }
-    .time-inputs {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 8px;
-    }
-    .time-inputs input {
-      width: 100%;
-      text-align: center;
-    }
-  
-    @media (max-width: 480px) {
-      #form-container { gap: 12px; }
-/*      .time-inputs { grid-template-columns: 1fr; }*/
-      button { width: 100%; }
-    }
-    
-    .time-inputs label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .time-inputs label input {
-      flex: 1;
-      min-width: 0;
-    }
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <meta charset="UTF-8">
+    <title>Custom Digital Timer</title>
+    <!-- ✅ Load Google Fonts so dropdown selections actually take effect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&family=Roboto+Mono:wght@400;700&family=Ubuntu+Mono:wght@400;700&display=swap"
+          rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100svh;
+            transition: background-color 0.3s, color 0.3s, font-family 0.3s;
+            font-family: monospace;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
 
-    #close-btn {
-      position: fixed;
-      top: calc(env(safe-area-inset-top) + 8px);
-      right: calc(env(safe-area-inset-right) + 8px);
-      z-index: 2147483647;
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
-      border: 1px solid currentColor;
-      background: transparent;
-      color: currentColor;
-      font-size: 24px;
-      line-height: 1;
-      display: none; /* shown only while running */
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      touch-action: manipulation;
-    }
-    #close-btn:active { transform: scale(0.96); }
+        #form-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
 
-    /* Put this in your <style> block */
-    label:has(> input[type="checkbox"]) {
-      display: inline-flex;
-      align-items: center;  /* vertically center */
-      gap: 8px;            /* space between box and text */
-    }
-    #record-wrap { display:none; }                /* initial state */
-    #record-wrap.show { display:inline-flex; }
-    label:has(> input[type="checkbox"]) {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .show-record #record-wrap { display: inline-flex; }  /* when visible */
-  
-  #timer-canvas {
-      display: block;
-      width: min(100%, 720px);
-      height: auto;
-      aspect-ratio: 20 / 7; /* reserve height to prevent jump */
-      display: none; /* will be set to block when running in Canvas mode */
-  }
-  </style>
+        label {
+            font-size: 16px;
+        }
+
+        /* Fixed-height preview/timer boxes */
+        #timer, #preview {
+            font-size: clamp(40px, 12vw, 120px);
+            line-height: 1;
+            height: 1em;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-variant-numeric: tabular-nums lining-nums;
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
+
+        #timer {
+            display: none;
+        }
+
+        input, select, button {
+            font-size: 16px;
+            min-height: 44px;
+            padding: 10px 12px;
+            touch-action: manipulation;
+        }
+
+        .time-inputs {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .time-inputs input {
+            width: 100%;
+            text-align: center;
+        }
+
+        @media (max-width: 480px) {
+            #form-container {
+                gap: 12px;
+            }
+
+            /*      .time-inputs { grid-template-columns: 1fr; }*/
+            button {
+                width: 100%;
+            }
+        }
+
+        .time-inputs label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .time-inputs label input {
+            flex: 1;
+            min-width: 0;
+        }
+
+        #close-btn {
+            position: fixed;
+            top: calc(env(safe-area-inset-top) + 8px);
+            right: calc(env(safe-area-inset-right) + 8px);
+            z-index: 2147483647;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid currentColor;
+            background: transparent;
+            color: currentColor;
+            font-size: 24px;
+            line-height: 1;
+            display: none; /* shown only while running */
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        #close-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* Put this in your <style> block */
+        label:has(> input[type="checkbox"]) {
+            display: inline-flex;
+            align-items: center; /* vertically center */
+            gap: 8px; /* space between box and text */
+        }
+
+        #record-wrap {
+            display: none;
+        }
+
+        /* initial state */
+        #record-wrap.show {
+            display: inline-flex;
+        }
+
+        label:has(> input[type="checkbox"]) {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .show-record #record-wrap {
+            display: inline-flex;
+        }
+
+        /* when visible */
+
+        #timer-canvas {
+            width: min(100%, 720px);
+            height: auto;
+            aspect-ratio: 20 / 7; /* reserve height to prevent jump */
+            display: none; /* will be set to block when running in Canvas mode */
+        }
+    </style>
 </head>
 <body>
-  <div id="form-container">
+<div id="form-container">
     <div id="preview">00:00.00</div>
     <div class="time-inputs">
-      <label>MM:<input type="number" id="mm" min="0" max="59" value="0" inputmode="numeric" pattern="[0-9]*"></label>
-      <label>SS:<input type="number" id="ss" min="0" max="59" value="0" onblur="clipInput(this, 59)" inputmode="numeric" pattern="[0-9]*"></label>
-      <label>CS:<input type="number" id="cs" min="0" max="99" value="0" onblur="clipInput(this, 99)" inputmode="numeric" pattern="[0-9]*"></label>
+        <label>MM:<input type="number" id="mm" min="0" max="59" value="0" inputmode="numeric" pattern="[0-9]*"></label>
+        <label>SS:<input type="number" id="ss" min="0" max="59" value="0" onblur="clipInput(this, 59)"
+                         inputmode="numeric" pattern="[0-9]*"></label>
+        <label>CS:<input type="number" id="cs" min="0" max="99" value="0" onblur="clipInput(this, 99)"
+                         inputmode="numeric" pattern="[0-9]*"></label>
     </div>
     <label>
-      Background Color:
-      <input type="color" id="bg-color" value="#000000" onchange="updatePreview()">
+        Background Color:
+        <input type="color" id="bg-color" value="#000000" onchange="updatePreview()">
     </label>
     <label>
-      Font Color:
-      <input type="color" id="font-color" value="#ffffff" onchange="updatePreview()">
+        Font Color:
+        <input type="color" id="font-color" value="#ffffff" onchange="updatePreview()">
     </label>
     <label>
-      Font Family:
-      <select id="font-family" onchange="updatePreview()">
-        <option value="Courier New">Courier New</option>
-        <option value="Consolas">Consolas</option>
-        <option value="Menlo">Menlo</option>
-        <option value="Monaco">Monaco</option>
-        <option value="Source Code Pro">Source Code Pro</option>
-        <option value="DejaVu Sans Mono">DejaVu Sans Mono</option>
-        <option value="Ubuntu Mono">Ubuntu Mono</option>
-        <option value="Roboto Mono">Roboto Mono</option>
-        <option value="monospace" selected>monospace</option>
-      </select>
+        Font Family:
+        <select id="font-family" onchange="updatePreview()">
+            <option value="Courier New">Courier New</option>
+            <option value="Consolas">Consolas</option>
+            <option value="Menlo">Menlo</option>
+            <option value="Monaco">Monaco</option>
+            <option value="Source Code Pro">Source Code Pro</option>
+            <option value="DejaVu Sans Mono">DejaVu Sans Mono</option>
+            <option value="Ubuntu Mono">Ubuntu Mono</option>
+            <option value="Roboto Mono">Roboto Mono</option>
+            <option value="monospace" selected>monospace</option>
+        </select>
     </label>
     <label>
-      Show centiseconds:
-      <input type="checkbox" id="show-ms" checked>
+        Show centiseconds:
+        <input type="checkbox" id="show-ms" checked>
     </label>
     <label>
-      Reverse (Count Down):
-      <input type="checkbox" id="reverse-mode">
+        Reverse (Count Down):
+        <input type="checkbox" id="reverse-mode">
     </label>
     <label>
-      Delay Seconds:
-      <input type="number" id="delay" min="0" max="10" value="1">
+        Delay Seconds:
+        <input type="number" id="delay" min="0" max="10" value="1">
     </label>
     <label>
-      Display Mode:
-      <select id="display-mode">
-        <option value="dom" selected>DOM</option>
-        <option value="canvas">Canvas</option>
-      </select>
+        Display Mode:
+        <select id="display-mode">
+            <option value="dom" selected>DOM</option>
+            <option value="canvas">Canvas</option>
+        </select>
     </label>
 
     <label id="record-wrap">
-      Record to WebM:
-      <input type="checkbox" id="record-video">
+        Record to WebM:
+        <input type="checkbox" id="record-video">
     </label>
     <button onclick="startTimer()">Run Timer</button>
-  </div>
-  <button id="close-btn" aria-label="Close timer" title="Close">×</button>
-  <div id="timer">00:00.00</div>
-  <canvas id="timer-canvas" style="display:none;"></canvas>
+</div>
+<button id="close-btn" aria-label="Close timer" title="Close">×</button>
+<div id="timer">00:00.00</div>
+<canvas id="timer-canvas" style="display:none;"></canvas>
 
-  <script>
+<script>
     let running = false;
     let animationId = null;
     let initialStyle = {};
     let recorder = null;
     let recordedChunks = [];
 
-    
-    let canvasCtx = null; // cached 2D context per run
-window.onload = () => {
-      const style = getComputedStyle(document.body);
-      initialStyle = {
-        bg: style.backgroundColor,
-        color: style.color,
-        font: style.fontFamily
-    };
 
-      const modeSel = document.getElementById("display-mode");
-      const recordWrap = document.getElementById("record-wrap");
-      if (modeSel && recordWrap) {
-        const toggleRecord = () => { recordWrap.classList.toggle("show", modeSel.value === "canvas"); };
-        modeSel.addEventListener("change", toggleRecord);
-        toggleRecord();
-      }
-      updatePreview();
+    let canvasCtx = null; // cached 2D context per run
+    window.onload = () => {
+        const style = getComputedStyle(document.body);
+        initialStyle = {
+            bg: style.backgroundColor,
+            color: style.color,
+            font: style.fontFamily
+        };
+
+        const modeSel = document.getElementById("display-mode");
+        const recordWrap = document.getElementById("record-wrap");
+        if (modeSel && recordWrap) {
+            const toggleRecord = () => {
+                recordWrap.classList.toggle("show", modeSel.value === "canvas");
+            };
+            modeSel.addEventListener("change", toggleRecord);
+            toggleRecord();
+        }
+        updatePreview();
     };
 
     function clipInput(input, max) {
-      const val = parseInt(input.value) || 0;
-      input.value = Math.min(Math.max(0, val), max);
+        const val = parseInt(input.value) || 0;
+        input.value = Math.min(Math.max(0, val), max);
     }
 
     function updatePreview() {
-      const font = document.getElementById("font-family").value;
-      const color = document.getElementById("font-color").value;
-      const bg = document.getElementById("bg-color").value;
-      const preview = document.getElementById("preview");
-      preview.style.fontFamily = `"${font}", monospace`;
-      preview.style.color = color;
-      preview.style.backgroundColor = bg;
+        const font = document.getElementById("font-family").value;
+        const color = document.getElementById("font-color").value;
+        const bg = document.getElementById("bg-color").value;
+        const preview = document.getElementById("preview");
+        preview.style.fontFamily = `"${font}", monospace`;
+        preview.style.color = color;
+        preview.style.backgroundColor = bg;
     }
 
-     // --- Canvas & Recording helpers ---
+    // --- Canvas & Recording helpers ---
     function whenFontsReady() {
-      return (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+        return (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
     }
 
     function initCanvas(font, textColor, bgColor) {
-      const cvs = document.getElementById("timer-canvas");
-      const dpr = Math.max(1, window.devicePixelRatio || 1);
-      // Use rendered width or fallback
-      const rect = cvs.getBoundingClientRect();
-      const w = rect.width;
-      const cssWidth = Math.min(w > 0 ? w : 720, 720);
-      const cssHeight = Math.max(160, Math.round(cssWidth * 0.35));
-      cvs.width = Math.floor(cssWidth * dpr);
-      cvs.height = Math.floor(cssHeight * dpr);
-      const ctx = cvs.getContext("2d");
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      // match monospace + size similar to DOM clamp
-      ctx.font = `700 ${Math.round(cssWidth * 0.18)}px "${font}", monospace`;
-      ctx._cfg = { textColor, bgColor, cssWidth, cssHeight };
-      return ctx;
+        const cvs = document.getElementById("timer-canvas");
+        const dpr = Math.max(1, window.devicePixelRatio || 1);
+        // Use rendered width or fallback
+        const rect = cvs.getBoundingClientRect();
+        const w = rect.width;
+        const cssWidth = Math.min(w > 0 ? w : 720, 720);
+        const cssHeight = Math.max(160, Math.round(cssWidth * 0.35));
+        cvs.width = Math.floor(cssWidth * dpr);
+        cvs.height = Math.floor(cssHeight * dpr);
+        const ctx = cvs.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        // match monospace + size similar to DOM clamp
+        ctx.font = `700 ${Math.round(cssWidth * 0.18)}px "${font}", monospace`;
+        ctx._cfg = {textColor, bgColor, cssWidth, cssHeight};
+        return ctx;
     }
 
     function drawCanvasText(ctx, text) {
-      const { textColor, bgColor, cssWidth, cssHeight } = ctx._cfg || {};
-      if (bgColor) {
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, cssWidth, cssHeight);
-      } else {
-        ctx.clearRect(0, 0, cssWidth, cssHeight);
-      }
-      ctx.fillStyle = textColor || "#fff";
-      ctx.fillText(text, cssWidth / 2, cssHeight / 2);
+        const {textColor, bgColor, cssWidth, cssHeight} = ctx._cfg || {};
+        if (bgColor) {
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, cssWidth, cssHeight);
+        } else {
+            ctx.clearRect(0, 0, cssWidth, cssHeight);
+        }
+        ctx.fillStyle = textColor || "#fff";
+        ctx.fillText(text, cssWidth / 2, cssHeight / 2);
     }
 
     function startRecordingIfEnabled(canvas, enabled) {
-      if (!enabled || !canvas.captureStream || typeof MediaRecorder === "undefined") return null;
-      const stream = canvas.captureStream(30);
-      const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ?
-                   "video/webm;codecs=vp9" :
-                   (MediaRecorder.isTypeSupported("video/webm;codecs=vp8") ? "video/webm;codecs=vp8" : "video/webm");
-      recorder = new MediaRecorder(stream, { mimeType: mime });
-      recordedChunks = [];
-      recorder.ondataavailable = e => { if (e.data && e.data.size) recordedChunks.push(e.data); };
-      recorder.onstop = () => {
-        try {
-          const blob = new Blob(recordedChunks, { type: "video/webm" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url; a.download = "timer.webm";
-          a.click();
-          setTimeout(() => URL.revokeObjectURL(url), 0);
-        } catch {}
-      };
-      recorder.start();
-      return recorder;
+        if (!enabled || !canvas.captureStream || typeof MediaRecorder === "undefined") return null;
+        const stream = canvas.captureStream(30);
+        const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ?
+            "video/webm;codecs=vp9" :
+            (MediaRecorder.isTypeSupported("video/webm;codecs=vp8") ? "video/webm;codecs=vp8" : "video/webm");
+        recorder = new MediaRecorder(stream, {mimeType: mime});
+        recordedChunks = [];
+        recorder.ondataavailable = e => {
+            if (e.data && e.data.size) recordedChunks.push(e.data);
+        };
+        recorder.onstop = () => {
+            try {
+                const blob = new Blob(recordedChunks, {type: "video/webm"});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "timer.webm";
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 0);
+            } catch {
+            }
+        };
+        recorder.start();
+        return recorder;
     }
 
     function stopRecordingIfActive() {
-      try {
-        if (recorder && recorder.state !== "inactive") recorder.stop();
-      } catch {}
-      recorder = null;
+        try {
+            if (recorder && recorder.state !== "inactive") recorder.stop();
+        } catch {
+        }
+        recorder = null;
     }
 
     function getTotalMs() {
-      const mm = Math.max(0, parseInt(document.getElementById("mm").value) || 0);
-      const ss = Math.min(Math.max(0, parseInt(document.getElementById("ss").value) || 0), 59);
-      const cs = Math.min(Math.max(0, parseInt(document.getElementById("cs").value) || 0), 99);
-      return mm * 60000 + ss * 1000 + cs * 10;
+        const mm = Math.max(0, parseInt(document.getElementById("mm").value) || 0);
+        const ss = Math.min(Math.max(0, parseInt(document.getElementById("ss").value) || 0), 59);
+        const cs = Math.min(Math.max(0, parseInt(document.getElementById("cs").value) || 0), 99);
+        return mm * 60000 + ss * 1000 + cs * 10;
     }
 
     function formatTime(ms, showMs) {
-      ms = Math.max(0, ms);
-      const minutes = Math.floor(ms / 60000);
-      const seconds = Math.floor((ms % 60000) / 1000);
-      const centis = Math.floor((ms % 1000) / 10);
-      return showMs
-        ? (
-            String(minutes).padStart(2, '0') + ':' +
-            String(seconds).padStart(2, '0') + '.' +
-            String(centis).padStart(2, '0')
-          )
-        : (
-            String(minutes).padStart(2, '0') + ':' +
-            String(seconds).padStart(2, '0')
-          );
+        ms = Math.max(0, ms);
+        const minutes = Math.floor(ms / 60000);
+        const seconds = Math.floor((ms % 60000) / 1000);
+        const centis = Math.floor((ms % 1000) / 10);
+        return showMs
+            ? (
+                String(minutes).padStart(2, '0') + ':' +
+                String(seconds).padStart(2, '0') + '.' +
+                String(centis).padStart(2, '0')
+            )
+            : (
+                String(minutes).padStart(2, '0') + ':' +
+                String(seconds).padStart(2, '0')
+            );
     }
 
     function cancelTimer() {
-      running = false;
-      cancelAnimationFrame(animationId);
-      document.getElementById("timer").style.display = "none";
-      document.getElementById("form-container").style.display = "flex";
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.backgroundColor = initialStyle.bg;
-      document.body.style.color = initialStyle.color;
-      document.body.style.fontFamily = initialStyle.font;
+        running = false;
+        cancelAnimationFrame(animationId);
+        document.getElementById("timer").style.display = "none";
+        document.getElementById("form-container").style.display = "flex";
+        document.removeEventListener("keydown", onKeyDown);
+        document.body.style.backgroundColor = initialStyle.bg;
+        document.body.style.color = initialStyle.color;
+        document.body.style.fontFamily = initialStyle.font;
 
-      const closeBtn = document.getElementById("close-btn");
-      if (closeBtn) {
-        closeBtn.style.display = "none"; closeBtn.onclick = null;
-      }
+        const closeBtn = document.getElementById("close-btn");
+        if (closeBtn) {
+            closeBtn.style.display = "none";
+            closeBtn.onclick = null;
+        }
 
-      const canvasEl = document.getElementById("timer-canvas");
-      if (canvasEl) canvasEl.style.display = "none";
+        const canvasEl = document.getElementById("timer-canvas");
+        if (canvasEl) canvasEl.style.display = "none";
 
-      stopRecordingIfActive && stopRecordingIfActive();
+        stopRecordingIfActive && stopRecordingIfActive();
     }
 
     function onKeyDown(e) {
-      if (e.key === "Escape") {
-        cancelTimer();
-      }
+        if (e.key === "Escape") {
+            cancelTimer();
+        }
     }
 
     function startTimer() {
-      const totalMs = getTotalMs();
-      const delaySeconds = parseFloat(document.getElementById("delay").value) || 0;
-      const bg = document.getElementById("bg-color").value;
-      const color = document.getElementById("font-color").value;
-      const font = document.getElementById("font-family").value;
-      const reverse = document.getElementById("reverse-mode").checked;
-      const showMs = document.getElementById("show-ms").checked;
+        const totalMs = getTotalMs();
+        const delaySeconds = parseFloat(document.getElementById("delay").value) || 0;
+        const bg = document.getElementById("bg-color").value;
+        const color = document.getElementById("font-color").value;
+        const font = document.getElementById("font-family").value;
+        const reverse = document.getElementById("reverse-mode").checked;
+        const showMs = document.getElementById("show-ms").checked;
 
-      
-      const mode = (document.getElementById("display-mode")?.value) || "dom";
-      const wantRecord = (mode === "canvas") && !!document.getElementById("record-video")?.checked;
-      document.body.style.backgroundColor = bg;
-      document.body.style.color = color;
-      document.body.style.fontFamily = `"${font}", monospace`;
-      document.getElementById("form-container").style.display = "none";
-      const timerDisplay = document.getElementById("timer");
-      timerDisplay.style.display = "block";
-      const canvasEl = document.getElementById("timer-canvas");
-      const closeBtn = document.getElementById("close-btn");
-      if (closeBtn) { closeBtn.style.display = "inline-flex"; closeBtn.onclick = cancelTimer; }
 
-      if (mode === "dom") {
-        canvasEl.style.display = "none";
+        const mode = (document.getElementById("display-mode")?.value) || "dom";
+        const wantRecord = (mode === "canvas") && !!document.getElementById("record-video")?.checked;
+        document.body.style.backgroundColor = bg;
+        document.body.style.color = color;
+        document.body.style.fontFamily = `"${font}", monospace`;
+        document.getElementById("form-container").style.display = "none";
+        const timerDisplay = document.getElementById("timer");
         timerDisplay.style.display = "block";
-        timerDisplay.textContent = formatTime(reverse ? totalMs : 0, showMs);
-      } else {
-        timerDisplay.style.display = "none";
-        canvasEl.style.display = "block";
-        whenFontsReady().then(() => { requestAnimationFrame(() => { canvasCtx = initCanvas(font, color, bg); drawCanvasText(canvasCtx, formatTime(reverse ? totalMs : 0, showMs)); if (typeof startRecordingIfEnabled==='function') startRecordingIfEnabled(canvasEl, wantRecord); }); });
-        startRecordingIfEnabled(canvasEl, wantRecord);
-      }
-running = true;
-      document.addEventListener("keydown", onKeyDown);
+        const canvasEl = document.getElementById("timer-canvas");
+        const closeBtn = document.getElementById("close-btn");
+        if (closeBtn) {
+            closeBtn.style.display = "inline-flex";
+            closeBtn.onclick = cancelTimer;
+        }
 
-      setTimeout(() => {
-        const start = performance.now();
-        let lastText = "";
+        if (mode === "dom") {
+            canvasEl.style.display = "none";
+            timerDisplay.style.display = "block";
+            timerDisplay.textContent = formatTime(reverse ? totalMs : 0, showMs);
+        } else {
+            timerDisplay.style.display = "none";
+            canvasEl.style.display = "block";
+            whenFontsReady().then(() => {
+                requestAnimationFrame(() => {
+                    canvasCtx = initCanvas(font, color, bg);
+                    drawCanvasText(canvasCtx, formatTime(reverse ? totalMs : 0, showMs));
+                    if (typeof startRecordingIfEnabled === 'function') startRecordingIfEnabled(canvasEl, wantRecord);
+                });
+            });
+            startRecordingIfEnabled(canvasEl, wantRecord);
+        }
+        running = true;
+        document.addEventListener("keydown", onKeyDown);
 
-        function update() {
-          if (!running) return;
-          const now = performance.now();
-          const elapsed = now - start;
-          const currentMs = reverse ? totalMs - elapsed : elapsed;
-          const cappedMs = reverse ? Math.max(currentMs, 0) : Math.min(currentMs, totalMs);
-          const text = formatTime(cappedMs, showMs);
-          if (text !== lastText) {
-            if (mode === "dom") { timerDisplay.textContent = text; } else { if (!canvasCtx) { canvasCtx = initCanvas(font, color, bg); } drawCanvasText(canvasCtx, text); }
-            lastText = text;
-          }
-          if ((reverse && currentMs > 0) || (!reverse && elapsed < totalMs)) {
-            animationId = requestAnimationFrame(update);
-          }
-        else {
-            if (mode === "canvas") stopRecordingIfActive();
-          }
-}
-        update();
-      }, delaySeconds * 1000);
+        setTimeout(() => {
+            const start = performance.now();
+            let lastText = "";
+
+            function update() {
+                if (!running) return;
+                const now = performance.now();
+                const elapsed = now - start;
+                const currentMs = reverse ? totalMs - elapsed : elapsed;
+                const cappedMs = reverse ? Math.max(currentMs, 0) : Math.min(currentMs, totalMs);
+                const text = formatTime(cappedMs, showMs);
+                if (text !== lastText) {
+                    if (mode === "dom") {
+                        timerDisplay.textContent = text;
+                    } else {
+                        if (!canvasCtx) {
+                            canvasCtx = initCanvas(font, color, bg);
+                        }
+                        drawCanvasText(canvasCtx, text);
+                    }
+                    lastText = text;
+                }
+                if ((reverse && currentMs > 0) || (!reverse && elapsed < totalMs)) {
+                    animationId = requestAnimationFrame(update);
+                } else {
+                    if (mode === "canvas") stopRecordingIfActive();
+                }
+            }
+
+            update();
+        }, delaySeconds * 1000);
     }
-  </script>
+</script>
 </body>
 </html>
