@@ -4,7 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
   <meta charset="UTF-8">
-  <title>Stylable Digital Timer</title>
+  <title>Custom Digital Timer</title>
   <!-- ✅ Load Google Fonts so dropdown selections actually take effect -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +12,6 @@
   <style>
     body {
       margin: 0;
-      padding: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -21,7 +20,7 @@
       transition: background-color 0.3s, color 0.3s, font-family 0.3s;
       font-family: monospace;
       padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-}
+    }
     #form-container {
       display: flex;
       flex-direction: column;
@@ -46,18 +45,15 @@
     #timer { display: none; }
     input, select, button {
       font-size: 16px;
-      padding: 6px;
       min-height: 44px;
       padding: 10px 12px;
       touch-action: manipulation;
-}
+    }
     .time-inputs {
-      display: flex;
-      gap: 5px;
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
-}
+    }
     .time-inputs input {
       width: 100%;
       text-align: center;
@@ -78,7 +74,7 @@
       flex: 1;
       min-width: 0;
     }
-  
+
     #close-btn {
       position: fixed;
       top: calc(env(safe-area-inset-top) + 8px);
@@ -100,6 +96,20 @@
     }
     #close-btn:active { transform: scale(0.96); }
 
+    /* Put this in your <style> block */
+    label:has(> input[type="checkbox"]) {
+      display: inline-flex;
+      align-items: center;  /* vertically center */
+      gap: 8px;            /* space between box and text */
+    }
+    #record-wrap { display:none; }                /* initial state */
+    #record-wrap.show { display:inline-flex; }
+    label:has(> input[type="checkbox"]) {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .show-record #record-wrap { display: inline-flex; }  /* when visible */
   </style>
 </head>
 <body>
@@ -110,10 +120,6 @@
       <label>SS:<input type="number" id="ss" min="0" max="59" value="0" onblur="clipInput(this, 59)" inputmode="numeric" pattern="[0-9]*"></label>
       <label>CS:<input type="number" id="cs" min="0" max="99" value="0" onblur="clipInput(this, 99)" inputmode="numeric" pattern="[0-9]*"></label>
     </div>
-    <label>
-      Delay Seconds:
-      <input type="number" id="delay" min="0" max="10" value="1">
-    </label>
     <label>
       Background Color:
       <input type="color" id="bg-color" value="#000000" onchange="updatePreview()">
@@ -137,22 +143,41 @@
       </select>
     </label>
     <label>
+      Show centiseconds:
+      <input type="checkbox" id="show-ms" checked>
+    </label>
+    <label>
       Reverse (Count Down):
       <input type="checkbox" id="reverse-mode">
     </label>
     <label>
-      Show centiseconds:
-      <input type="checkbox" id="show-ms" checked>
+      Delay Seconds:
+      <input type="number" id="delay" min="0" max="10" value="1">
+    </label>
+    <label>
+      Display Mode:
+      <select id="display-mode">
+        <option value="dom" selected>DOM</option>
+        <option value="canvas">Canvas</option>
+      </select>
+    </label>
+
+    <label id="record-wrap">
+      Record to WebM:
+      <input type="checkbox" id="record-video">
     </label>
     <button onclick="startTimer()">Run Timer</button>
   </div>
   <button id="close-btn" aria-label="Close timer" title="Close">×</button>
   <div id="timer">00:00.00</div>
+  <canvas id="timer-canvas" style="display:none;"></canvas>
 
   <script>
     let running = false;
     let animationId = null;
     let initialStyle = {};
+    let recorder = null;
+    let recordedChunks = [];
 
     window.onload = () => {
       const style = getComputedStyle(document.body);
@@ -160,7 +185,15 @@
         bg: style.backgroundColor,
         color: style.color,
         font: style.fontFamily
-      };
+    };
+
+      const modeSel = document.getElementById("display-mode");
+      const recordWrap = document.getElementById("record-wrap");
+      if (modeSel && recordWrap) {
+        const toggleRecord = () => { recordWrap.classList.toggle("show", modeSel.value === "canvas"); };
+        modeSel.addEventListener("change", toggleRecord);
+        toggleRecord();
+      }
       updatePreview();
     };
 
@@ -177,6 +210,71 @@
       preview.style.fontFamily = `"${font}", monospace`;
       preview.style.color = color;
       preview.style.backgroundColor = bg;
+    }
+
+     // --- Canvas & Recording helpers ---
+    function whenFontsReady() {
+      return (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+    }
+
+    function initCanvas(font, textColor, bgColor) {
+      const cvs = document.getElementById("timer-canvas");
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      // Use rendered width or fallback
+      const cssWidth = Math.min(cvs.clientWidth || 720, 720);
+      const cssHeight = Math.max(160, Math.round(cssWidth * 0.35));
+      cvs.width = Math.floor(cssWidth * dpr);
+      cvs.height = Math.floor(cssHeight * dpr);
+      const ctx = cvs.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      // match monospace + size similar to DOM clamp
+      ctx.font = `700 ${Math.round(cssWidth * 0.18)}px "${font}", monospace`;
+      ctx._cfg = { textColor, bgColor, cssWidth, cssHeight };
+      return ctx;
+    }
+
+    function drawCanvasText(ctx, text) {
+      const { textColor, bgColor, cssWidth, cssHeight } = ctx._cfg || {};
+      if (bgColor) {
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, cssWidth, cssHeight);
+      } else {
+        ctx.clearRect(0, 0, cssWidth, cssHeight);
+      }
+      ctx.fillStyle = textColor || "#fff";
+      ctx.fillText(text, cssWidth / 2, cssHeight / 2);
+    }
+
+    function startRecordingIfEnabled(canvas, enabled) {
+      if (!enabled || !canvas.captureStream || typeof MediaRecorder === "undefined") return null;
+      const stream = canvas.captureStream(30);
+      const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ?
+                   "video/webm;codecs=vp9" :
+                   (MediaRecorder.isTypeSupported("video/webm;codecs=vp8") ? "video/webm;codecs=vp8" : "video/webm");
+      recorder = new MediaRecorder(stream, { mimeType: mime });
+      recordedChunks = [];
+      recorder.ondataavailable = e => { if (e.data && e.data.size) recordedChunks.push(e.data); };
+      recorder.onstop = () => {
+        try {
+          const blob = new Blob(recordedChunks, { type: "video/webm" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url; a.download = "timer.webm";
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 0);
+        } catch {}
+      };
+      recorder.start();
+      return recorder;
+    }
+
+    function stopRecordingIfActive() {
+      try {
+        if (recorder && recorder.state !== "inactive") recorder.stop();
+      } catch {}
+      recorder = null;
     }
 
     function getTotalMs() {
@@ -209,11 +307,19 @@
       document.getElementById("timer").style.display = "none";
       document.getElementById("form-container").style.display = "flex";
       document.removeEventListener("keydown", onKeyDown);
-
-      const closeBtn = document.getElementById("close-btn");
-      if (closeBtn) { closeBtn.style.display = "none"; closeBtn.onclick = null; }document.body.style.backgroundColor = initialStyle.bg;
+      document.body.style.backgroundColor = initialStyle.bg;
       document.body.style.color = initialStyle.color;
       document.body.style.fontFamily = initialStyle.font;
+
+      const closeBtn = document.getElementById("close-btn");
+      if (closeBtn) {
+        closeBtn.style.display = "none"; closeBtn.onclick = null;
+      }
+
+      const canvasEl = document.getElementById("timer-canvas");
+      if (canvasEl) canvasEl.style.display = "none";
+
+      stopRecordingIfActive && stopRecordingIfActive();
     }
 
     function onKeyDown(e) {
@@ -231,20 +337,33 @@
       const reverse = document.getElementById("reverse-mode").checked;
       const showMs = document.getElementById("show-ms").checked;
 
+      
+      const mode = (document.getElementById("display-mode")?.value) || "dom";
+      const wantRecord = (mode === "canvas") && !!document.getElementById("record-video")?.checked;
       document.body.style.backgroundColor = bg;
       document.body.style.color = color;
       document.body.style.fontFamily = `"${font}", monospace`;
       document.getElementById("form-container").style.display = "none";
       const timerDisplay = document.getElementById("timer");
       timerDisplay.style.display = "block";
+      const canvasEl = document.getElementById("timer-canvas");
       const closeBtn = document.getElementById("close-btn");
-      if (closeBtn) {
-        closeBtn.style.display = "inline-flex";
-        closeBtn.onclick = cancelTimer;
-      }
-      timerDisplay.textContent = formatTime(reverse ? totalMs : 0, showMs);
+      if (closeBtn) { closeBtn.style.display = "inline-flex"; closeBtn.onclick = cancelTimer; }
 
-      running = true;
+      if (mode === "dom") {
+        canvasEl.style.display = "none";
+        timerDisplay.style.display = "block";
+        timerDisplay.textContent = formatTime(reverse ? totalMs : 0, showMs);
+      } else {
+        timerDisplay.style.display = "none";
+        canvasEl.style.display = "block";
+        whenFontsReady().then(() => {
+          const ctx = initCanvas(font, color, bg);
+          drawCanvasText(ctx, formatTime(reverse ? totalMs : 0, showMs));
+        });
+        startRecordingIfEnabled(canvasEl, wantRecord);
+      }
+running = true;
       document.addEventListener("keydown", onKeyDown);
 
       setTimeout(() => {
@@ -259,13 +378,21 @@
           const cappedMs = reverse ? Math.max(currentMs, 0) : Math.min(currentMs, totalMs);
           const text = formatTime(cappedMs, showMs);
           if (text !== lastText) {
-            timerDisplay.textContent = text;
+            if (mode === "dom") {
+              timerDisplay.textContent = text;
+            } else {
+              const ctx = initCanvas(font, color, bg);
+              drawCanvasText(ctx, text);
+            }
             lastText = text;
           }
           if ((reverse && currentMs > 0) || (!reverse && elapsed < totalMs)) {
             animationId = requestAnimationFrame(update);
           }
-        }
+        else {
+            if (mode === "canvas") stopRecordingIfActive();
+          }
+}
         update();
       }, delaySeconds * 1000);
     }
